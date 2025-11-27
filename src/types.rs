@@ -34,3 +34,34 @@ pub struct Isomorphism {
     nodes: Permutation,
     edges: Permutation,
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_valid_permutations() {
+        assert!(Permutation::new([0, 1, 2]).is_some());
+        assert!(Permutation::new([2, 0, 1]).is_some());
+        assert!(Permutation::new([1, 0]).is_some());
+        assert!(Permutation::new(vec![0]).is_some());
+        assert!(Permutation::new(Vec::<usize>::new()).is_some());
+    }
+
+    #[test]
+    fn test_invalid_permutations() {
+        assert!(Permutation::new([0, 2]).is_none());
+        assert!(Permutation::new([0, 1, 1]).is_none());
+        assert!(Permutation::new([0, 1, 3]).is_none());
+        assert!(Permutation::new([1, 2, 3]).is_none());
+        assert!(Permutation::new([0, 0, 1]).is_none());
+    }
+
+    #[test]
+    fn test_from_different_iterables() {
+        assert!(Permutation::new(vec![0, 1, 2]).is_some());
+        assert!(Permutation::new([0, 1, 2]).is_some());
+        assert!(Permutation::new((0..3).collect::<Vec<_>>()).is_some());
+        assert!(Permutation::new([2, 1, 0].iter().copied()).is_some());
+    }
+}
