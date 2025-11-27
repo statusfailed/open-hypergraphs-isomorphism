@@ -1,6 +1,6 @@
 use crate::permutation::*;
 
-use open_hypergraphs::lax::OpenHypergraph;
+use open_hypergraphs::lax::{NodeId, OpenHypergraph};
 
 use std::collections::HashSet;
 use std::hash::Hash;
@@ -38,13 +38,12 @@ impl Isomorphism {
 ////////////////////////////////////////////////////////////////////////////////
 // isomorphism for fully-connected open hypergraphs by constraint propagation
 
-#[derive(Clone, PartialEq, Debug)]
-pub enum State {
-    Unconstrained,
-    InSet(HashSet<usize>),
-    Exactly(usize),
-}
-
+/// Find an isomorphism of open hypergraphs
+/// Approach:
+///     - Associate a HashSet<usize> to each node in f, representing the possible nodes in g it
+///       could correspond to
+///     - Initialize this to all nodes for g, but singleton sets for interfaces
+///     - Propagate constraints: each operation does a 'local update'
 fn find_iso<O: Eq + Clone + Hash, A: Eq + Clone + Hash>(
     f: &OpenHypergraph<O, A>,
     g: &OpenHypergraph<O, A>,
@@ -52,17 +51,40 @@ fn find_iso<O: Eq + Clone + Hash, A: Eq + Clone + Hash>(
     // Run fast nogood checks
     crate::nogood::nogood(f, g)?;
 
-    let n = f.hypergraph.nodes.len();
-
-    // *execute* f as a program where:
-
     // Node state is a set of constraints where:
     //  None           => completely unconstrained
     //  HashSet<usize> => must be in set
-    let _state: Vec<Option<HashSet<usize>>> = vec![None; n];
+    let n = f.hypergraph.nodes.len();
+    let mut state: Vec<State> = vec![State::Any; n];
 
-    // TODO: Initialize known information (interfaces!)
+    // Initialize known information (interfaces!)
+    for i in 0..f.sources.len() {
+        state[i] = State::single(g.sources[i]);
+    }
+    for i in 0..f.targets.len() {
+        state[i] = State::single(g.targets[i]);
+    }
+
+    let mut updated = true;
+    while updated {
+        for _e in &f.hypergraph.edges {
+            todo!("update local constraints");
+        }
+    }
 
     // TODO: return result
     None
+}
+
+#[derive(Clone, PartialEq, Debug)]
+pub enum State {
+    Any,
+    Set(HashSet<NodeId>),
+}
+
+// TODO: add
+impl State {
+    fn single(i: NodeId) -> State {
+        State::Set(HashSet::from([i]))
+    }
 }

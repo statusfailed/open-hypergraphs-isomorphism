@@ -48,3 +48,64 @@ fn is_sorted_equal<T: Eq + Hash>(x: &Vec<T>, y: &Vec<T>) -> bool {
 
     true
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_is_sorted_equal_empty_vectors() {
+        let x: Vec<i32> = vec![];
+        let y: Vec<i32> = vec![];
+        assert!(is_sorted_equal(&x, &y));
+    }
+
+    #[test]
+    fn test_is_sorted_equal_single_element() {
+        let x = vec![1];
+        let y = vec![1];
+        assert!(is_sorted_equal(&x, &y));
+    }
+
+    #[test]
+    fn test_is_sorted_equal_different_lengths() {
+        let x = vec![1, 2];
+        let y = vec![1];
+        assert!(!is_sorted_equal(&x, &y));
+    }
+
+    #[test]
+    fn test_is_sorted_equal_same_elements_different_order() {
+        let x = vec![3, 1, 2];
+        let y = vec![2, 3, 1];
+        assert!(is_sorted_equal(&x, &y));
+    }
+
+    #[test]
+    fn test_is_sorted_equal_different_elements() {
+        let x = vec![1, 2, 3];
+        let y = vec![1, 2, 4];
+        assert!(!is_sorted_equal(&x, &y));
+    }
+
+    #[test]
+    fn test_is_sorted_equal_with_duplicates() {
+        let x = vec![1, 2, 2, 3];
+        let y = vec![3, 2, 1, 2];
+        assert!(is_sorted_equal(&x, &y));
+    }
+
+    #[test]
+    fn test_is_sorted_equal_different_duplicate_counts() {
+        let x = vec![1, 2, 2];
+        let y = vec![1, 1, 2];
+        assert!(!is_sorted_equal(&x, &y));
+    }
+
+    #[test]
+    fn test_is_sorted_equal_strings() {
+        let x = vec!["hello", "world", "rust"];
+        let y = vec!["rust", "hello", "world"];
+        assert!(is_sorted_equal(&x, &y));
+    }
+}
