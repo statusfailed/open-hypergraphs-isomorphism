@@ -1,6 +1,7 @@
 use open_hypergraphs::lax::OpenHypergraph;
 use std::hash::Hash;
 
+// TODO: also check arity/coarity and types of each edge
 pub(crate) fn nogood<O: Eq + Clone + Hash, A: Eq + Clone + Hash>(
     f: &OpenHypergraph<O, A>,
     g: &OpenHypergraph<O, A>,
