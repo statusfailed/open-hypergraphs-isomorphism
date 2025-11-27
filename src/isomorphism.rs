@@ -1,6 +1,6 @@
 use crate::permutation::*;
 
-use open_hypergraphs::lax::{NodeId, OpenHypergraph};
+use open_hypergraphs::lax::{EdgeId, Hyperedge, NodeId, OpenHypergraph};
 
 use std::collections::HashSet;
 use std::hash::Hash;
@@ -67,13 +67,54 @@ fn find_iso<O: Eq + Clone + Hash, A: Eq + Clone + Hash>(
 
     let mut updated = true;
     while updated {
-        for _e in &f.hypergraph.edges {
-            todo!("update local constraints");
+        updated = false;
+
+        for (edge_id, edge_label, sources, targets) in iter_edges(f, &state) {
+            updated = true;
         }
     }
 
     // TODO: return result
     None
+}
+
+/// Iterate through each edge, collecting associated information:
+///     - Edge id
+///     - Edge label
+///     - Source node IDs, types, and values
+///     - Target node IDs, types, and values
+fn iter_edges<'a, O, A, T>(
+    f: &'a OpenHypergraph<O, A>,
+    s: &'a Vec<T>,
+) -> impl Iterator<
+    Item = (
+        EdgeId,
+        &'a A,
+        Vec<(NodeId, &'a O, &'a T)>,
+        Vec<(NodeId, &'a O, &'a T)>,
+    ),
+> + 'a {
+    assert_eq!(
+        s.len(),
+        f.hypergraph.nodes.len(),
+        "must have as many state values as nodes"
+    );
+
+    (0..f.hypergraph.edges.len()).map(move |edge_id| {
+        let edge_label = &f.hypergraph.edges[edge_id];
+        let Hyperedge { sources, targets } = &f.hypergraph.adjacency[edge_id];
+
+        let sources = sources
+            .iter()
+            .map(|i| (*i, &f.hypergraph.nodes[i.0], &s[i.0]))
+            .collect();
+        let targets = targets
+            .iter()
+            .map(|i| (*i, &f.hypergraph.nodes[i.0], &s[i.0]))
+            .collect();
+
+        (EdgeId(edge_id), edge_label, sources, targets)
+    })
 }
 
 #[derive(Clone, PartialEq, Debug)]
