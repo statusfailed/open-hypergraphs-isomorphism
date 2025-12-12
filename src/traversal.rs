@@ -22,7 +22,6 @@ pub enum Error {
 
     InvalidNodePermutation,
     InvalidEdgePermutation,
-    InvalidIsomorphism,
 }
 
 /// Pseudocode:
@@ -59,7 +58,7 @@ pub fn find_isomorphism<O: Eq + Clone + Hash, A: Eq + Clone + Hash>(
     let nodes = nodes.ok_or(Error::InvalidNodePermutation)?;
     let edges = edges.ok_or(Error::InvalidEdgePermutation)?;
 
-    Isomorphism::new(nodes, edges).ok_or(Error::InvalidIsomorphism)
+    Ok(Isomorphism { nodes, edges })
 }
 
 /// Indexes for a pair of open hypergraphs

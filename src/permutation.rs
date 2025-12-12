@@ -1,4 +1,5 @@
 use std::fmt::Debug;
+use std::ops::Deref;
 
 #[derive(Clone, PartialEq, Debug)]
 pub struct Permutation(Vec<usize>);
@@ -30,6 +31,14 @@ impl Permutation {
 
     pub fn identity(size: usize) -> Self {
         Self((0..size).collect())
+    }
+}
+
+impl Deref for Permutation {
+    type Target = [usize];
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
     }
 }
 
