@@ -394,4 +394,34 @@ mod tests {
             "Edge permutations should match"
         );
     }
+
+    #[test]
+    fn test_non_isomorphic_circuits() {
+        // Circuit 1: Cast Int -> Float, then negate
+        let circuit1 = {
+            let cast =
+                OpenHypergraph::singleton(EdgeOp::Cast, vec![NodeType::Int], vec![NodeType::Float]);
+            let negate = OpenHypergraph::singleton(
+                EdgeOp::Negate,
+                vec![NodeType::Float],
+                vec![NodeType::Float],
+            );
+            (&cast >> &negate).expect("composition should succeed")
+        };
+
+        // Circuit 2: Multiply two ints
+        let circuit2 = OpenHypergraph::singleton(
+            EdgeOp::Mul,
+            vec![NodeType::Int, NodeType::Int],
+            vec![NodeType::Int],
+        );
+
+        // These circuits should NOT be isomorphic
+        let result = find_isomorphism(&circuit1, &circuit2);
+
+        assert!(
+            result.is_err(),
+            "Should fail to find isomorphism between non-isomorphic circuits"
+        );
+    }
 }
