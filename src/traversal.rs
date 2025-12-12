@@ -50,7 +50,7 @@ pub fn find_isomorphism<O: Eq + Clone + Hash, A: Eq + Clone + Hash>(
     f: &OpenHypergraph<O, A>,
     g: &OpenHypergraph<O, A>,
 ) -> Result<Isomorphism, Error> {
-    let state = SearchState::new(f, g);
+    let state = SearchState::new(f, g)?;
     let (node_mapping, edge_mapping) = state.find_isomorphism()?;
 
     let nodes = Permutation::new(node_mapping.into_iter().map(|x| x.0));
@@ -72,24 +72,36 @@ struct SearchState<'a, O, A> {
 }
 
 impl<'a, O: Eq + Clone + Hash, A: Eq + Clone + Hash> SearchState<'a, O, A> {
-    pub fn new(f: &'a OpenHypergraph<O, A>, g: &'a OpenHypergraph<O, A>) -> SearchState<'a, O, A> {
-        // TODO: create indexes
+    pub fn new(
+        f: &'a OpenHypergraph<O, A>,
+        g: &'a OpenHypergraph<O, A>,
+    ) -> Result<SearchState<'a, O, A>, Error> {
         let f_index = Index::new(&f.hypergraph);
         let g_index = Index::new(&g.hypergraph);
-        SearchState {
+
+        // Verify that source/target nodes are not targets/sources, respectively
+        // (monogamicity check!)
+        for &source_node in &f.sources {
+            if f_index.of_target.contains_key(&source_node) {
+                return Err(Error::NonMonogamous(source_node));
+            }
+        }
+        for &target_node in &f.targets {
+            if f_index.of_source.contains_key(&target_node) {
+                return Err(Error::NonMonogamous(target_node));
+            }
+        }
+
+        Ok(SearchState {
             f,
             g,
             f_index,
             g_index,
-        }
-
-        // TODO: verify that source/target nodes are not targets/sources, respectively
-        // (monogamicity check!)
+        })
     }
 
     fn find_isomorphism(&self) -> Result<(Vec<NodeId>, Vec<EdgeId>), Error> {
         // Run fast nogood checks
-        // TODO: do this externally?
         crate::nogood::nogood(self.f, self.g).ok_or(Error::Nogood)?;
 
         let f = self.f;
@@ -111,8 +123,14 @@ impl<'a, O: Eq + Clone + Hash, A: Eq + Clone + Hash> SearchState<'a, O, A> {
         stack.extend(f.targets.iter().copied().zip(g.targets.iter().copied()));
 
         // which nodes of f have been visited (either in stack, or in f_to_g)
-        // TODO: initialize to interfaces
+        // Initialize to interfaces since they're already on the stack
         let mut visited: Vec<bool> = vec![false; n];
+        for &source_node in &f.sources {
+            visited[source_node.0] = true;
+        }
+        for &target_node in &f.targets {
+            visited[target_node.0] = true;
+        }
 
         // For each proposed pairing of nodes, ...
         while let Some((f_node_id, g_node_id)) = stack.pop() {
