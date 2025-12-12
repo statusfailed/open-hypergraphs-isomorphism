@@ -1,9 +1,10 @@
+//! Michael McLeod's traversal-based algorithm for isomorphism finding in monogamous connected
+//! hypergraphs
 use open_hypergraphs::lax::{EdgeId, NodeId, OpenHypergraph};
 use std::collections::HashMap;
 use std::hash::Hash;
 
-use super::types::Isomorphism;
-use crate::Permutation;
+use crate::{Isomorphism, Permutation};
 
 pub enum Error {
     /// A nogood check failed
