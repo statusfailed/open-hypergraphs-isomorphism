@@ -6,6 +6,7 @@ use std::hash::Hash;
 
 use crate::{Isomorphism, Permutation};
 
+#[derive(Debug)]
 pub enum Error {
     /// A nogood check failed
     Nogood,
@@ -95,11 +96,12 @@ impl<'a, O: Eq + Clone + Hash, A: Eq + Clone + Hash> SearchState<'a, O, A> {
         let g = self.g;
 
         let n = f.hypergraph.nodes.len();
+        let e = f.hypergraph.edges.len();
 
         // The set of visited nodes, serving double duty as the assigned mapping to g.
         // Note that we never visit a node twice.
         let mut node_mapping: Vec<Option<NodeId>> = vec![None; n];
-        let mut edge_mapping: Vec<Option<EdgeId>> = vec![None; n];
+        let mut edge_mapping: Vec<Option<EdgeId>> = vec![None; e];
 
         // "stack" is our priority queue of unvisited f nodes.
         // Each is paired with a single g node.
@@ -205,7 +207,7 @@ impl<'a, O: Eq + Clone + Hash, A: Eq + Clone + Hash> SearchState<'a, O, A> {
         let g_adjacency = &self.g.hypergraph.adjacency[g_edge_id.0];
 
         if !self.same_labels(&f_adjacency.sources, &g_adjacency.sources)
-            || self.same_labels(&f_adjacency.targets, &g_adjacency.targets)
+            || !self.same_labels(&f_adjacency.targets, &g_adjacency.targets)
         {
             return Err(Error::InvalidEdgeMatch(f_edge_id, g_edge_id));
         }
@@ -259,5 +261,119 @@ impl Index {
             of_source,
             of_target,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[derive(Clone, PartialEq, Eq, Debug, Hash)]
+    pub enum NodeType {
+        Int,
+        Float,
+    }
+
+    #[derive(Clone, PartialEq, Eq, Debug, Hash)]
+    pub enum EdgeOp {
+        Cast,
+        Negate,
+        Mul,
+    }
+
+    fn cast_and_negate_then_mul() -> OpenHypergraph<NodeType, EdgeOp> {
+        // Create individual operations using singleton
+        let cast =
+            OpenHypergraph::singleton(EdgeOp::Cast, vec![NodeType::Int], vec![NodeType::Float]);
+        let negate =
+            OpenHypergraph::singleton(EdgeOp::Negate, vec![NodeType::Float], vec![NodeType::Float]);
+        let mul = OpenHypergraph::singleton(
+            EdgeOp::Mul,
+            vec![NodeType::Float, NodeType::Float],
+            vec![NodeType::Float],
+        );
+
+        // Compose (cast | negate) >> mul
+        let cast_and_negate = &cast | &negate;
+        (&cast_and_negate >> &mul).expect("composition should succeed")
+    }
+
+    /// open hypergraphs should be isomorphic to themselves
+    #[test]
+    fn test_find_identity_isomorphism() {
+        use open_hypergraphs::category::*;
+        let circuits = [
+            (
+                "id",
+                OpenHypergraph::<NodeType, EdgeOp>::identity(vec![NodeType::Float]),
+            ),
+            (
+                "singleton",
+                OpenHypergraph::singleton(
+                    EdgeOp::Negate,
+                    vec![NodeType::Float],
+                    vec![NodeType::Float],
+                ),
+            ),
+            ("cntm", cast_and_negate_then_mul()),
+        ];
+
+        for (name, circuit) in circuits {
+            println!("testing {name}");
+            let num_nodes = circuit.hypergraph.nodes.len();
+            let num_edges = circuit.hypergraph.edges.len();
+
+            // Test with identity isomorphism
+            let expected_isomorphism = Isomorphism::identity(num_nodes, num_edges);
+
+            // Use find_isomorphism to discover the identity isomorphism
+            let found_isomorphism =
+                find_isomorphism(&circuit, &circuit).expect("should find identity isomorphism");
+
+            // Verify we found the identity isomorphism
+            assert_eq!(
+                &*found_isomorphism.nodes, &*expected_isomorphism.nodes,
+                "Should find identity node permutation"
+            );
+            assert_eq!(
+                &*found_isomorphism.edges, &*expected_isomorphism.edges,
+                "Should find identity edge permutation"
+            );
+        }
+    }
+
+    #[test]
+    fn test_find_cyclic_isomorphism() {
+        let circuit = cast_and_negate_then_mul();
+
+        let num_nodes = circuit.hypergraph.nodes.len();
+        let num_edges = circuit.hypergraph.edges.len();
+
+        // Create cyclic permutation (i+1) % n for nodes
+        let cyclic_permutation: Vec<usize> = (0..num_nodes).map(|i| (i + 1) % num_nodes).collect();
+        let node_permutation = Permutation::new(cyclic_permutation).expect("valid permutation");
+
+        // Create isomorphism with the cyclic node permutation and identity edge permutation
+        let expected_isomorphism = Isomorphism {
+            nodes: node_permutation,
+            edges: Permutation::identity(num_edges),
+        };
+
+        // Apply the isomorphism to get the transformed circuit
+        let circuit_copy = expected_isomorphism.apply(&circuit);
+
+        // Use find_isomorphism to discover the isomorphism
+        let found_isomorphism =
+            find_isomorphism(&circuit, &circuit_copy).expect("should find isomorphism");
+
+        // Verify we found the correct isomorphism
+        assert_eq!(
+            &*found_isomorphism.nodes, &*expected_isomorphism.nodes,
+            "Node permutations should match"
+        );
+        assert_eq!(
+            &*found_isomorphism.edges, &*expected_isomorphism.edges,
+            "Edge permutations should match"
+        );
     }
 }
